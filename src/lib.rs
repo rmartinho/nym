@@ -1,14 +1,13 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+#![allow(mixed_script_confusables, confusable_idents)]
+#![warn(missing_docs)]
+#![deny(clippy::correctness)]
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+//! An implementation of a pseudonym system as described in https://www.princeton.edu/~rblee/ELE572Papers/Fall04Readings/lrsw.pdf
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub mod key;
+pub mod nym;
+pub mod cred;
+pub mod error;
+
+pub mod proof;
+pub mod hash;

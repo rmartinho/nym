@@ -3,6 +3,12 @@ name = "nym"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+curve25519-dalek = { version = "4", features = ["rand_core", "serde", "digest"] }
+digest = "0.10"
+futures = "0.3"
+merlin = "3"
+rand = "0.8"
+serde = "1"
+thiserror = "1"
+trait-variant = "0.1"
