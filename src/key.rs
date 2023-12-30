@@ -25,6 +25,10 @@ impl UserSecretKey {
     pub fn public(&self) -> UserPublicKey {
         UserPublicKey(self.0 * RISTRETTO_BASEPOINT_POINT)
     }
+
+    pub(crate) fn exponent(&self) -> Scalar {
+        self.0
+    }
 }
 
 impl UserPublicKey {
@@ -50,11 +54,15 @@ impl OrgSecretKey {
             self.1 * RISTRETTO_BASEPOINT_POINT,
         )
     }
+
+    pub(crate) fn exponents(&self) -> (Scalar, Scalar) {
+        (self.0, self.1)
+    }
 }
 
 impl OrgPublicKey {
     /// Gets this public key's points on the ristretto curve.
-    pub fn point(&self) -> (RistrettoPoint, RistrettoPoint) {
+    pub fn points(&self) -> (RistrettoPoint, RistrettoPoint) {
         (self.0, self.1)
     }
 }

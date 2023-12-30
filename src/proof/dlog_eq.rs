@@ -1,10 +1,11 @@
 //! Zero-knowledge proof of equality of discrete logarithms aka protocol Π
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    transport::LocalTransport,
+};
 use curve25519_dalek::{RistrettoPoint, Scalar};
 use rand::thread_rng;
-
-use super::LocalProofTransport;
 
 /// Public parameters
 #[derive(Copy, Clone)]
@@ -27,7 +28,7 @@ pub struct Secrets {
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the prover
-pub async fn prove<T: LocalProofTransport>(
+pub async fn prove<T: LocalTransport>(
     t: &mut T,
     publics: Publics,
     secrets: Secrets,
@@ -44,7 +45,7 @@ pub async fn prove<T: LocalProofTransport>(
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the verifier
-pub async fn verify<T: LocalProofTransport>(t: &mut T, publics: Publics) -> Result<(), Error> {
+pub async fn verify<T: LocalTransport>(t: &mut T, publics: Publics) -> Result<(), Error> {
     let a: RistrettoPoint = t.receive(b"a").await?;
     let b: RistrettoPoint = t.receive(b"b").await?;
     let c = Scalar::random(&mut thread_rng());

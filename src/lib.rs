@@ -6,8 +6,8 @@
 
 pub mod key;
 pub mod nym;
-pub mod cred;
 pub mod error;
 
 pub mod proof;
 pub mod hash;
+pub mod transport;

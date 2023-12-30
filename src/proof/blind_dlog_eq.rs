@@ -3,12 +3,13 @@
 use crate::{
     error::{Error, Result},
     hash::{TranscriptDigest as _, TranscriptProtocol as _},
+    transport::LocalTransport,
 };
 use curve25519_dalek::{RistrettoPoint, Scalar};
 use merlin::Transcript;
 use rand::thread_rng;
 
-use super::{dlog_eq, LocalProofTransport};
+use super::dlog_eq;
 
 /// Public parameters
 pub type Publics = dlog_eq::Publics;
@@ -24,7 +25,7 @@ pub struct VerifierSecrets {
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the prover
-pub async fn prove<T: LocalProofTransport>(
+pub async fn prove<T: LocalTransport>(
     t: &mut T,
     publics: Publics,
     secrets: ProverSecrets,
@@ -41,7 +42,7 @@ pub async fn prove<T: LocalProofTransport>(
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the verifier
-pub async fn verify<T: LocalProofTransport>(
+pub async fn verify<T: LocalTransport>(
     t: &mut T,
     publics: Publics,
     secrets: VerifierSecrets,
