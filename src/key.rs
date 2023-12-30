@@ -26,6 +26,7 @@ impl UserSecretKey {
         UserPublicKey(self.0 * RISTRETTO_BASEPOINT_POINT)
     }
 
+    /// Gets this key's exponent
     pub(crate) fn exponent(&self) -> Scalar {
         self.0
     }
@@ -55,6 +56,7 @@ impl OrgSecretKey {
         )
     }
 
+    /// Gets this key's exponents
     pub(crate) fn exponents(&self) -> (Scalar, Scalar) {
         (self.0, self.1)
     }

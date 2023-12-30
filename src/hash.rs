@@ -114,7 +114,7 @@ impl Transcribe for usize {
 
 impl Transcribe for [u8] {
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]) {
-        t.append_message(label, &self);
+        t.append_message(label, self);
     }
 }
 

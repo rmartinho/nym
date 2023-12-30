@@ -54,7 +54,7 @@ pub async fn verify<T: LocalTransport>(
     let β = Scalar::random(&mut thread_rng());
     let a1 = a + α * publics.g + β * publics.h;
     let b1 = secrets.γ * (b + α * publics.g1 + β * publics.h1);
-    let c_minus_β = hash(a1, b1);
+    let c_minus_β = get_challenge(a1, b1);
     let c = c_minus_β + β;
     t.send(b"c", c).await?;
     let y: Scalar = t.receive(b"y").await?;
@@ -94,7 +94,8 @@ impl DlogEqTranscript {
     }
 }
 
-fn hash(a: RistrettoPoint, b: RistrettoPoint) -> Scalar {
+/// Hashes two points to generate a challenge
+fn get_challenge(a: RistrettoPoint, b: RistrettoPoint) -> Scalar {
     let mut h = Transcript::new(b"blind-dlog-eq-proof/non-interactive-challenge");
     h.append_value(b"a", &a);
     h.append_value(b"b", &b);
