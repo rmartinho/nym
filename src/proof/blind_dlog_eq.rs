@@ -32,7 +32,7 @@ pub async fn prove<T: LocalTransport>(
 ) -> Result<(), Error> {
     let r = Scalar::random(&mut thread_rng());
     let a = r * publics.g;
-    let b = r * publics.h;
+    let b = r * publics.g1;
     t.send(b"a", a).await?;
     t.send(b"b", b).await?;
     let c: Scalar = t.receive(b"c").await?;
@@ -52,12 +52,12 @@ pub async fn verify<T: LocalTransport>(
 
     let α = Scalar::random(&mut thread_rng());
     let β = Scalar::random(&mut thread_rng());
-    let a1 = a + α * publics.g + β * publics.h;
-    let b1 = secrets.γ * (b + α * publics.g1 + β * publics.h1);
-    let c_minus_β = get_challenge(a1, b1);
+    let a1 = a + α * publics.g + β * publics.h; // g*r + g*α * g*xβ = g*(r + α + xβ)
+    let b1 = secrets.γ * (b + α * publics.g1 + β * publics.h1); // g*γr + g*γα * g*γxβ = g*γ*(r + α * xβ)
+    let c_minus_β = get_challenge(a1, b1); // c
     let c = c_minus_β + β;
     t.send(b"c", c).await?;
-    let y: Scalar = t.receive(b"y").await?;
+    let y: Scalar = t.receive(b"y").await?; // r + (c+β)x + α = r + α + xβ + cx
 
     let a_ok = y * publics.g == a + c * publics.h;
     let b_ok = y * publics.g1 == b + c * publics.h1;
@@ -74,11 +74,12 @@ pub async fn verify<T: LocalTransport>(
 }
 
 /// A transcript of protocol Π_NI
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct DlogEqTranscript {
-    a: RistrettoPoint,
-    b: RistrettoPoint,
-    c: Scalar,
-    y: Scalar,
+    pub a: RistrettoPoint,
+    pub b: RistrettoPoint,
+    pub c: Scalar,
+    pub y: Scalar,
 }
 
 impl DlogEqTranscript {

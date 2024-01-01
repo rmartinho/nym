@@ -6,12 +6,14 @@ use rand::thread_rng;
 /// The secret part of a user's master key
 pub struct UserSecretKey(Scalar);
 
+#[derive(Copy, Clone)]
 /// The public part of a user's master key
 pub struct UserPublicKey(RistrettoPoint);
 
 /// The secret part of an organization's credential key
 pub struct OrgSecretKey(Scalar, Scalar);
 
+#[derive(Copy, Clone)]
 /// The public part of an organization's credential key
 pub struct OrgPublicKey(RistrettoPoint, RistrettoPoint);
 

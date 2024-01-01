@@ -35,7 +35,7 @@ pub async fn prove<T: LocalTransport>(
 ) -> Result<(), Error> {
     let r = Scalar::random(&mut thread_rng());
     let a = r * publics.g;
-    let b = r * publics.h;
+    let b = r * publics.g1;
     t.send(b"a", a).await?;
     t.send(b"b", b).await?;
     let c: Scalar = t.receive(b"c").await?;
