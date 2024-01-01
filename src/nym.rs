@@ -299,21 +299,18 @@ impl Org {
         cred: Cred,
         source_key: OrgPublicKey,
     ) -> Result {
-        println!("first transcript");
         cred.t1.verify(Publics {
             g: RISTRETTO_BASEPOINT_POINT,
             h: source_key.points().1,
             g1: cred.b,
             h1: cred.a1,
         })?;
-        println!("second transcript");
         cred.t2.verify(Publics {
             g: RISTRETTO_BASEPOINT_POINT,
             h: source_key.points().0,
             g1: cred.a + cred.a1,
             h1: cred.b1,
         })?;
-        println!("final check");
         dlog_eq::verify(
             user,
             Publics {
