@@ -7,8 +7,8 @@ use crate::{
     error::{Error, Result},
     key::{OrgPublicKey, OrgSecretKey, UserPublicKey, UserSecretKey},
     proof::{
-        blind_dlog_eq::{self, DlogEqTranscript, ProverSecrets, VerifierSecrets},
-        dlog_eq::{self, Publics},
+        blind_dlog_eq::{self, ProverSecrets, VerifierSecrets},
+        dlog_eq::{self, Publics, Transcript},
     },
     transport::LocalTransport,
 };
@@ -27,8 +27,8 @@ pub struct Cred {
     b: RistrettoPoint,
     a1: RistrettoPoint,
     b1: RistrettoPoint,
-    t1: DlogEqTranscript,
-    t2: DlogEqTranscript,
+    t1: Transcript,
+    t2: Transcript,
 }
 
 /// An organization

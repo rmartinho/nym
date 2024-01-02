@@ -2,6 +2,7 @@
 
 use crate::{
     error::{Error, Result},
+    hash::{TranscriptDigest as _, TranscriptProtocol as _},
     transport::LocalTransport,
 };
 use curve25519_dalek::{RistrettoPoint, Scalar};
@@ -58,4 +59,43 @@ pub async fn verify<T: LocalTransport>(t: &mut T, publics: Publics) -> Result<()
     } else {
         Err(Error::BadProof)
     }
+}
+
+/// A transcript of protocol Π_NI
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub struct Transcript {
+    pub a: RistrettoPoint,
+    pub b: RistrettoPoint,
+    pub c: Scalar,
+    pub y: Scalar,
+}
+
+impl Transcript {
+    /// Verifies this transcript
+    pub fn verify(&self, publics: Publics) -> Result {
+        let c_ok = self.c == non_interactive_challenge_for(publics, self.a, self.b);
+        let a_ok = self.y * publics.g == self.a + self.c * publics.h;
+        let b_ok = self.y * publics.g1 == self.b + self.c * publics.h1;
+        if c_ok && a_ok && b_ok {
+            Ok(())
+        } else {
+            Err(Error::BadProof)
+        }
+    }
+}
+
+/// Generates a non-interactive challenge for a proof of equality of discrete logarithms
+pub fn non_interactive_challenge_for(
+    publics: Publics,
+    a: RistrettoPoint,
+    b: RistrettoPoint,
+) -> Scalar {
+    let mut h = merlin::Transcript::new(b"dlog-eq-proof/non-interactive-challenge");
+    h.append_value(b"g", &publics.g);
+    h.append_value(b"h", &publics.h);
+    h.append_value(b"g~", &publics.g1);
+    h.append_value(b"h~", &publics.h1);
+    h.append_value(b"a", &a);
+    h.append_value(b"b", &b);
+    Scalar::from_hash(h.into_digest())
 }

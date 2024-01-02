@@ -2,14 +2,12 @@
 
 use crate::{
     error::{Error, Result},
-    hash::{TranscriptDigest as _, TranscriptProtocol as _},
     transport::LocalTransport,
 };
 use curve25519_dalek::{RistrettoPoint, Scalar};
-use merlin::Transcript;
 use rand::thread_rng;
 
-use super::dlog_eq;
+use super::dlog_eq::{self, Transcript};
 
 /// Public parameters
 pub type Publics = dlog_eq::Publics;
@@ -46,7 +44,7 @@ pub async fn verify<T: LocalTransport>(
     t: &mut T,
     publics: Publics,
     secrets: VerifierSecrets,
-) -> Result<DlogEqTranscript, Error> {
+) -> Result<Transcript, Error> {
     let a: RistrettoPoint = t.receive(b"a").await?;
     let b: RistrettoPoint = t.receive(b"b").await?;
 
@@ -54,7 +52,15 @@ pub async fn verify<T: LocalTransport>(
     let β = Scalar::random(&mut thread_rng());
     let a1 = a + α * publics.g + β * publics.h; // g*r + g*α * g*xβ = g*(r + α + xβ)
     let b1 = secrets.γ * (b + α * publics.g1 + β * publics.h1); // g*γr + g*γα * g*γxβ = g*γ*(r + α * xβ)
-    let c_minus_β = get_challenge(a1, b1); // c
+    let c_minus_β = dlog_eq::non_interactive_challenge_for(
+        Publics {
+            g1: secrets.γ * publics.g1,
+            h1: secrets.γ * publics.h1,
+            ..publics
+        },
+        a1,
+        b1,
+    ); // c
     let c = c_minus_β + β;
     t.send(b"c", c).await?;
     let y: Scalar = t.receive(b"y").await?; // r + (c+β)x + α = r + α + xβ + cx
@@ -62,7 +68,7 @@ pub async fn verify<T: LocalTransport>(
     let a_ok = y * publics.g == a + c * publics.h;
     let b_ok = y * publics.g1 == b + c * publics.h1;
     if a_ok & b_ok {
-        Ok(DlogEqTranscript {
+        Ok(Transcript {
             a: a1,
             b: b1,
             c: c_minus_β,
@@ -71,34 +77,4 @@ pub async fn verify<T: LocalTransport>(
     } else {
         Err(Error::BadProof)
     }
-}
-
-/// A transcript of protocol Π_NI
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub struct DlogEqTranscript {
-    pub a: RistrettoPoint,
-    pub b: RistrettoPoint,
-    pub c: Scalar,
-    pub y: Scalar,
-}
-
-impl DlogEqTranscript {
-    /// Verifies this transcript
-    pub fn verify(&self, publics: Publics) -> Result {
-        let a_ok = self.y * publics.g == self.a + self.c * publics.h;
-        let b_ok = self.y * publics.g1 == self.b + self.c * publics.h1;
-        if a_ok & b_ok {
-            Ok(())
-        } else {
-            Err(Error::BadProof)
-        }
-    }
-}
-
-/// Hashes two points to generate a challenge
-fn get_challenge(a: RistrettoPoint, b: RistrettoPoint) -> Scalar {
-    let mut h = Transcript::new(b"blind-dlog-eq-proof/non-interactive-challenge");
-    h.append_value(b"a", &a);
-    h.append_value(b"b", &b);
-    Scalar::from_hash(h.into_digest())
 }

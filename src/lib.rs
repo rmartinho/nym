@@ -4,9 +4,12 @@
 
 //! An implementation of a pseudonym system as described in <https://www.princeton.edu/~rblee/ELE572Papers/Fall04Readings/lrsw.pdf>
 
-pub mod error;
-pub mod key;
-pub mod nym;
+mod error;
+pub use error::*;
+mod key;
+pub use key::*;
+mod nym;
+pub use nym::*;
 
 mod hash;
 mod proof;
