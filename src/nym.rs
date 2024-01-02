@@ -2,6 +2,7 @@
 
 use curve25519_dalek::{constants::RISTRETTO_BASEPOINT_POINT, RistrettoPoint, Scalar};
 use rand::thread_rng;
+use serde::{Serialize, Deserialize};
 
 use crate::{
     error::{Error, Result},
@@ -14,14 +15,14 @@ use crate::{
 };
 
 /// A pseudonym
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Nym {
     a: RistrettoPoint,
     b: RistrettoPoint,
 }
 
 /// A credential
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Cred {
     a: RistrettoPoint,
     b: RistrettoPoint,

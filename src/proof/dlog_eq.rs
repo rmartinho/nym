@@ -7,6 +7,7 @@ use crate::{
 };
 use curve25519_dalek::{RistrettoPoint, Scalar};
 use rand::thread_rng;
+use serde::{Serialize, Deserialize};
 
 /// Public parameters
 #[derive(Copy, Clone)]
@@ -62,7 +63,7 @@ pub async fn verify<T: LocalTransport>(t: &mut T, publics: Publics) -> Result<()
 }
 
 /// A transcript of protocol Π_NI
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Transcript {
     pub a: RistrettoPoint,
     pub b: RistrettoPoint,
