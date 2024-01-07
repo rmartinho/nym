@@ -6,7 +6,7 @@
       "command": "build",
       "problemMatcher": ["$rustc"],
       "group": "build",
-      "label": "rust: cargo build"
+      "label": "rust: cargo +stable build"
     },
     {
       "type": "cargo",

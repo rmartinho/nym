@@ -1,7 +1,7 @@
 //! Secret and public keys
 
 use curve25519_dalek::{constants::RISTRETTO_BASEPOINT_POINT, RistrettoPoint, Scalar};
-use rand::thread_rng;
+use rand::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -28,8 +28,8 @@ pub struct OrgPublicKey(RistrettoPoint, RistrettoPoint);
 
 impl UserSecretKey {
     /// Generates a new random user secret key.
-    pub fn random() -> Self {
-        Self(Scalar::random(&mut thread_rng()))
+    pub fn random<R: CryptoRng + RngCore>(rng: &mut R) -> Self {
+        Self(Scalar::random(rng))
     }
 
     /// Gets the public part of this key.
@@ -52,10 +52,10 @@ impl UserPublicKey {
 
 impl OrgSecretKey {
     /// Generates a new random organization secret key.
-    pub fn random() -> Self {
+    pub fn random<R: CryptoRng + RngCore>(rng: &mut R) -> Self {
         Self(
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
+            Scalar::random(rng),
+            Scalar::random(rng),
         )
     }
 

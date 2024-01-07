@@ -356,6 +356,8 @@ impl User {
 
 #[cfg(test)]
 mod test {
+    use std::assert_matches::assert_matches;
+
     use futures::{
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
         executor::block_on,
@@ -364,6 +366,7 @@ mod test {
         sink::SinkExt as _,
         stream::StreamExt as _,
     };
+    use rand::thread_rng;
     use serde::{Deserialize, Serialize};
 
     use crate::{
@@ -429,8 +432,8 @@ mod test {
 
     #[test]
     fn nym_generation() {
-        let user = User::new(UserSecretKey::random());
-        let org = Org::new(OrgSecretKey::random());
+        let user = User::new(UserSecretKey::random(&mut thread_rng()));
+        let org = Org::new(OrgSecretKey::random(&mut thread_rng()));
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
         let (n1, n2) = block_on(try_join(
@@ -444,8 +447,8 @@ mod test {
 
     #[test]
     fn nym_authentication() {
-        let user = User::new(UserSecretKey::random());
-        let org = Org::new(OrgSecretKey::random());
+        let user = User::new(UserSecretKey::random(&mut thread_rng()));
+        let org = Org::new(OrgSecretKey::random(&mut thread_rng()));
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
         let (nym, _) = block_on(try_join(
@@ -458,13 +461,13 @@ mod test {
             user.authenticate_nym(&mut u_channel, nym),
             org.authenticate_nym(&mut o_channel, nym),
         ));
-        assert!(res.is_ok(), "expected Ok, found {res:?}");
+        assert_matches!(res, Ok(_));
     }
 
     #[test]
     fn cred_issuance() {
-        let user = User::new(UserSecretKey::random());
-        let org = Org::new(OrgSecretKey::random());
+        let user = User::new(UserSecretKey::random(&mut thread_rng()));
+        let org = Org::new(OrgSecretKey::random(&mut thread_rng()));
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
         let (nym, _) = block_on(try_join(
@@ -486,9 +489,9 @@ mod test {
 
     #[test]
     fn cred_transfer() {
-        let user = User::new(UserSecretKey::random());
-        let org1 = Org::new(OrgSecretKey::random());
-        let org2 = Org::new(OrgSecretKey::random());
+        let user = User::new(UserSecretKey::random(&mut thread_rng()));
+        let org1 = Org::new(OrgSecretKey::random(&mut thread_rng()));
+        let org2 = Org::new(OrgSecretKey::random(&mut thread_rng()));
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
         let (nym, _) = block_on(try_join(
@@ -507,6 +510,6 @@ mod test {
             user.transfer_credential(&mut u_channel, nym, cred),
             org2.transfer_credential(&mut o_channel, nym, cred, org1.public_key()),
         ));
-        assert!(res.is_ok(), "expected Ok, found {res:?}");
+        assert_matches!(res, Ok(_));
     }
 }
