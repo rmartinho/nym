@@ -2,7 +2,7 @@
 
 use curve25519_dalek::{constants::RISTRETTO_BASEPOINT_POINT, RistrettoPoint, Scalar};
 use rand::thread_rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result},
@@ -23,13 +23,14 @@ pub struct Nym {
 
 /// A credential
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct Cred {
     a: RistrettoPoint,
     b: RistrettoPoint,
-    a1: RistrettoPoint,
-    b1: RistrettoPoint,
-    t1: Transcript,
-    t2: Transcript,
+    A: RistrettoPoint,
+    B: RistrettoPoint,
+    T1: Transcript,
+    T2: Transcript,
 }
 
 /// An organization
@@ -77,19 +78,19 @@ impl User {
 impl Org {
     /// Generates a pseudonym
     pub async fn generate_nym<T: LocalTransport>(&self, user: &mut T) -> Result<Nym> {
-        let a1 = user.receive(b"a~").await?;
-        let b1 = user.receive(b"b~").await?;
+        let a_ = user.receive(b"a~").await?;
+        let b_ = user.receive(b"b~").await?;
         let r = Scalar::random(&mut thread_rng());
-        let a = r * a1;
+        let a = r * a_;
         user.send(b"a", a).await?;
         let b: RistrettoPoint = user.receive(b"b").await?;
         dlog_eq::verify(
             user,
             Publics {
-                g: a,
-                h: b,
-                g1: a1,
-                h1: b1,
+                g1: a,
+                h1: b,
+                g2: a_,
+                h2: b_,
             },
         )
         .await?;
@@ -102,25 +103,25 @@ impl Org {
         user: &mut T,
         user_key: UserPublicKey,
     ) -> Result<Nym> {
-        let a1 = user.receive(b"a~").await?;
-        let b1 = user.receive(b"b~").await?;
-        if a1 != RISTRETTO_BASEPOINT_POINT {
+        let a_ = user.receive(b"a~").await?;
+        let b_ = user.receive(b"b~").await?;
+        if a_ != RISTRETTO_BASEPOINT_POINT {
             return Err(Error::BadProof);
         }
-        if b1 != user_key.point() {
+        if b_ != user_key.point() {
             return Err(Error::BadProof);
         }
         let r = Scalar::random(&mut thread_rng());
-        let a = r * a1;
+        let a = r * a_;
         user.send(b"a", a).await?;
         let b: RistrettoPoint = user.receive(b"b").await?;
         dlog_eq::verify(
             user,
             Publics {
-                g: a,
-                h: b,
-                g1: a1,
-                h1: b1,
+                g1: a,
+                h1: b,
+                g2: a_,
+                h2: b_,
             },
         )
         .await?;
@@ -132,36 +133,36 @@ impl User {
     /// Generates a pseudonym
     pub async fn generate_nym<T: LocalTransport>(&self, org: &mut T) -> Result<Nym> {
         let γ = Scalar::random(&mut thread_rng());
-        let a1 = γ * RISTRETTO_BASEPOINT_POINT;
-        let b1 = self.sk.exponent() * a1;
-        self.generate_nym_impl(org, a1, b1).await
+        let a_ = γ * RISTRETTO_BASEPOINT_POINT;
+        let b_ = self.sk.exponent() * a_;
+        self.generate_nym_impl(org, a_, b_).await
     }
 
     /// Generates a pseudonym with a CA
     pub async fn generate_nym_with_ca<T: LocalTransport>(&self, org: &mut T) -> Result<Nym> {
-        let a1 = RISTRETTO_BASEPOINT_POINT;
-        let b1 = self.pk.point();
-        self.generate_nym_impl(org, a1, b1).await
+        let a_ = RISTRETTO_BASEPOINT_POINT;
+        let b_ = self.pk.point();
+        self.generate_nym_impl(org, a_, b_).await
     }
 
     async fn generate_nym_impl<T: LocalTransport>(
         &self,
         org: &mut T,
-        a1: RistrettoPoint,
-        b1: RistrettoPoint,
+        a_: RistrettoPoint,
+        b_: RistrettoPoint,
     ) -> Result<Nym> {
-        org.send(b"a~", a1).await?;
-        org.send(b"b~", b1).await?;
+        org.send(b"a~", a_).await?;
+        org.send(b"b~", b_).await?;
         let a = org.receive(b"a").await?;
         let b = self.sk.exponent() * a;
         org.send(b"b", b).await?;
         dlog_eq::prove(
             org,
             Publics {
-                g: a,
-                h: b,
-                g1: a1,
-                h1: b1,
+                g1: a,
+                h1: b,
+                g2: a_,
+                h2: b_,
             },
             ProverSecrets {
                 x: self.sk.exponent(),
@@ -178,10 +179,10 @@ impl Org {
         dlog_eq::verify(
             user,
             Publics {
-                g: nym.a,
-                h: nym.b,
                 g1: nym.a,
                 h1: nym.b,
+                g2: nym.a,
+                h2: nym.b,
             },
         )
         .await?;
@@ -195,10 +196,10 @@ impl User {
         dlog_eq::prove(
             org,
             Publics {
-                g: nym.a,
-                h: nym.b,
                 g1: nym.a,
                 h1: nym.b,
+                g2: nym.a,
+                h2: nym.b,
             },
             ProverSecrets {
                 x: self.sk.exponent(),
@@ -211,19 +212,20 @@ impl User {
 
 impl Org {
     /// Issues a new credential for a given nym
+    #[allow(non_snake_case)]
     pub async fn issue_credential<T: LocalTransport>(&self, user: &mut T, nym: Nym) -> Result {
-        let a1 = self.sk.exponents().1 * nym.b;
-        let b1 = self.sk.exponents().0 * (nym.a + self.sk.exponents().1 * nym.b);
-        user.send(b"A", a1).await?;
-        user.send(b"B", b1).await?;
+        let A = self.sk.exponents().1 * nym.b;
+        let B = self.sk.exponents().0 * (nym.a + self.sk.exponents().1 * nym.b);
+        user.send(b"A", A).await?;
+        user.send(b"B", B).await?;
 
         blind_dlog_eq::prove(
             user,
             Publics {
-                g: RISTRETTO_BASEPOINT_POINT,
-                h: self.pk.points().1,
-                g1: nym.b,
-                h1: a1,
+                g1: RISTRETTO_BASEPOINT_POINT,
+                h1: self.pk.points().1,
+                g2: nym.b,
+                h2: A,
             },
             ProverSecrets {
                 x: self.sk.exponents().1,
@@ -233,10 +235,10 @@ impl Org {
         blind_dlog_eq::prove(
             user,
             Publics {
-                g: RISTRETTO_BASEPOINT_POINT,
-                h: self.pk.points().0,
-                g1: nym.a + a1,
-                h1: b1,
+                g1: RISTRETTO_BASEPOINT_POINT,
+                h1: self.pk.points().0,
+                g2: nym.a + A,
+                h2: B,
             },
             ProverSecrets {
                 x: self.sk.exponents().0,
@@ -249,33 +251,34 @@ impl Org {
 
 impl User {
     /// Issues a new credential for a given nym
+    #[allow(non_snake_case)]
     pub async fn issue_credential<T: LocalTransport>(
         &self,
         org: &mut T,
         nym: Nym,
         source_key: OrgPublicKey,
     ) -> Result<Cred> {
-        let a1 = org.receive(b"A").await?;
-        let b1 = org.receive(b"B").await?;
+        let A = org.receive(b"A").await?;
+        let B = org.receive(b"B").await?;
         let γ = Scalar::random(&mut thread_rng());
-        let t1 = blind_dlog_eq::verify(
+        let T1 = blind_dlog_eq::verify(
             org,
             Publics {
-                g: RISTRETTO_BASEPOINT_POINT,
-                h: source_key.points().1,
-                g1: nym.b,
-                h1: a1,
+                g1: RISTRETTO_BASEPOINT_POINT,
+                h1: source_key.points().1,
+                g2: nym.b,
+                h2: A,
             },
             VerifierSecrets { γ },
         )
         .await?;
-        let t2 = blind_dlog_eq::verify(
+        let T2 = blind_dlog_eq::verify(
             org,
             Publics {
-                g: RISTRETTO_BASEPOINT_POINT,
-                h: source_key.points().0,
-                g1: nym.a + a1,
-                h1: b1,
+                g1: RISTRETTO_BASEPOINT_POINT,
+                h1: source_key.points().0,
+                g2: nym.a + A,
+                h2: B,
             },
             VerifierSecrets { γ },
         )
@@ -283,10 +286,10 @@ impl User {
         Ok(Cred {
             a: nym.a * γ,
             b: nym.b * γ,
-            a1: a1 * γ,
-            b1: b1 * γ,
-            t1,
-            t2,
+            A: A * γ,
+            B: B * γ,
+            T1,
+            T2,
         })
     }
 }
@@ -300,25 +303,25 @@ impl Org {
         cred: Cred,
         source_key: OrgPublicKey,
     ) -> Result {
-        cred.t1.verify(Publics {
-            g: RISTRETTO_BASEPOINT_POINT,
-            h: source_key.points().1,
-            g1: cred.b,
-            h1: cred.a1,
+        cred.T1.verify(Publics {
+            g1: RISTRETTO_BASEPOINT_POINT,
+            h1: source_key.points().1,
+            g2: cred.b,
+            h2: cred.A,
         })?;
-        cred.t2.verify(Publics {
-            g: RISTRETTO_BASEPOINT_POINT,
-            h: source_key.points().0,
-            g1: cred.a + cred.a1,
-            h1: cred.b1,
+        cred.T2.verify(Publics {
+            g1: RISTRETTO_BASEPOINT_POINT,
+            h1: source_key.points().0,
+            g2: cred.a + cred.A,
+            h2: cred.B,
         })?;
         dlog_eq::verify(
             user,
             Publics {
-                g: nym.a,
-                h: nym.b,
-                g1: cred.a,
-                h1: cred.b,
+                g1: nym.a,
+                h1: nym.b,
+                g2: cred.a,
+                h2: cred.b,
             },
         )
         .await?;
@@ -337,10 +340,10 @@ impl User {
         dlog_eq::prove(
             org,
             Publics {
-                g: nym.a,
-                h: nym.b,
-                g1: cred.a,
-                h1: cred.b,
+                g1: nym.a,
+                h1: nym.b,
+                g2: cred.a,
+                h2: cred.b,
             },
             ProverSecrets {
                 x: self.sk.exponent(),
@@ -430,10 +433,11 @@ mod test {
         let org = Org::new(OrgSecretKey::random());
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
-        let u_gen = user.generate_nym(&mut u_channel);
-        let o_gen = org.generate_nym(&mut o_channel);
-
-        let (n1, n2) = block_on(try_join(u_gen, o_gen)).unwrap();
+        let (n1, n2) = block_on(try_join(
+            user.generate_nym(&mut u_channel),
+            org.generate_nym(&mut o_channel),
+        ))
+        .unwrap();
         assert_eq!(n1, n2, "user and org should compute the same nym");
         assert_eq!(n1.a * user.sk.exponent(), n1.b, "nym should be valid");
     }
@@ -444,15 +448,17 @@ mod test {
         let org = Org::new(OrgSecretKey::random());
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
-        let u_gen = user.generate_nym(&mut u_channel);
-        let o_gen = org.generate_nym(&mut o_channel);
-        let (nym, _) = block_on(try_join(u_gen, o_gen)).unwrap();
+        let (nym, _) = block_on(try_join(
+            user.generate_nym(&mut u_channel),
+            org.generate_nym(&mut o_channel),
+        ))
+        .unwrap();
 
-        let u_auth = user.authenticate_nym(&mut u_channel, nym);
-        let o_auth = org.authenticate_nym(&mut o_channel, nym);
-
-        let res = block_on(try_join(u_auth, o_auth));
-        assert!(matches!(res, Ok(_)), "expected Ok, found {res:?}");
+        let res = block_on(try_join(
+            user.authenticate_nym(&mut u_channel, nym),
+            org.authenticate_nym(&mut o_channel, nym),
+        ));
+        assert!(res.is_ok(), "expected Ok, found {res:?}");
     }
 
     #[test]
@@ -461,18 +467,21 @@ mod test {
         let org = Org::new(OrgSecretKey::random());
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
-        let u_gen = user.generate_nym(&mut u_channel);
-        let o_gen = org.generate_nym(&mut o_channel);
-        let (nym, _) = block_on(try_join(u_gen, o_gen)).unwrap();
+        let (nym, _) = block_on(try_join(
+            user.generate_nym(&mut u_channel),
+            org.generate_nym(&mut o_channel),
+        ))
+        .unwrap();
 
-        let u_issue = user.issue_credential(&mut u_channel, nym, org.public_key());
-        let o_issue = org.issue_credential(&mut o_channel, nym);
-
-        let (cred, _) = block_on(try_join(u_issue, o_issue)).unwrap();
+        let (cred, _) = block_on(try_join(
+            user.issue_credential(&mut u_channel, nym, org.public_key()),
+            org.issue_credential(&mut o_channel, nym),
+        ))
+        .unwrap();
 
         assert_eq!(cred.a * user.sk.exponent(), cred.b);
-        assert_eq!(cred.b * org.sk.exponents().1, cred.a1);
-        assert_eq!((cred.a + cred.a1) * org.sk.exponents().0, cred.b1);
+        assert_eq!(cred.b * org.sk.exponents().1, cred.A);
+        assert_eq!((cred.a + cred.A) * org.sk.exponents().0, cred.B);
     }
 
     #[test]
@@ -482,19 +491,22 @@ mod test {
         let org2 = Org::new(OrgSecretKey::random());
 
         let (mut u_channel, mut o_channel) = TestTransport::new();
-        let u_gen = user.generate_nym(&mut u_channel);
-        let o_gen = org1.generate_nym(&mut o_channel);
-        let (nym, _) = block_on(try_join(u_gen, o_gen)).unwrap();
+        let (nym, _) = block_on(try_join(
+            user.generate_nym(&mut u_channel),
+            org1.generate_nym(&mut o_channel),
+        ))
+        .unwrap();
 
-        let u_issue = user.issue_credential(&mut u_channel, nym, org1.public_key());
-        let o_issue = org1.issue_credential(&mut o_channel, nym);
+        let (cred, _) = block_on(try_join(
+            user.issue_credential(&mut u_channel, nym, org1.public_key()),
+            org1.issue_credential(&mut o_channel, nym),
+        ))
+        .unwrap();
 
-        let (cred, _) = block_on(try_join(u_issue, o_issue)).unwrap();
-
-        let u_transfer = user.transfer_credential(&mut u_channel, nym, cred);
-        let o_transfer = org2.transfer_credential(&mut o_channel, nym, cred, org1.public_key());
-
-        let res = block_on(try_join(u_transfer, o_transfer));
-        assert!(matches!(res, Ok(_)), "expected Ok, found {res:?}");
+        let res = block_on(try_join(
+            user.transfer_credential(&mut u_channel, nym, cred),
+            org2.transfer_credential(&mut o_channel, nym, cred, org1.public_key()),
+        ));
+        assert!(res.is_ok(), "expected Ok, found {res:?}");
     }
 }

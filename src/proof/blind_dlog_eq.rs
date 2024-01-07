@@ -29,8 +29,8 @@ pub async fn prove<T: LocalTransport>(
     secrets: ProverSecrets,
 ) -> Result<(), Error> {
     let r = Scalar::random(&mut thread_rng());
-    let a = r * publics.g;
-    let b = r * publics.g1;
+    let a = r * publics.g1;
+    let b = r * publics.g2;
     t.send(b"a", a).await?;
     t.send(b"b", b).await?;
     let c: Scalar = t.receive(b"c").await?;
@@ -50,12 +50,12 @@ pub async fn verify<T: LocalTransport>(
 
     let α = Scalar::random(&mut thread_rng());
     let β = Scalar::random(&mut thread_rng());
-    let a1 = a + α * publics.g + β * publics.h; // g*r + g*α * g*xβ = g*(r + α + xβ)
-    let b1 = secrets.γ * (b + α * publics.g1 + β * publics.h1); // g*γr + g*γα * g*γxβ = g*γ*(r + α * xβ)
+    let a1 = a + α * publics.g1 + β * publics.h1; // g*r + g*α * g*xβ = g*(r + α + xβ)
+    let b1 = secrets.γ * (b + α * publics.g2 + β * publics.h2); // g*γr + g*γα * g*γxβ = g*γ*(r + α * xβ)
     let c_minus_β = dlog_eq::non_interactive_challenge_for(
         Publics {
-            g1: secrets.γ * publics.g1,
-            h1: secrets.γ * publics.h1,
+            g2: secrets.γ * publics.g2,
+            h2: secrets.γ * publics.h2,
             ..publics
         },
         a1,
@@ -65,8 +65,8 @@ pub async fn verify<T: LocalTransport>(
     t.send(b"c", c).await?;
     let y: Scalar = t.receive(b"y").await?; // r + (c+β)x + α = r + α + xβ + cx
 
-    let a_ok = y * publics.g == a + c * publics.h;
-    let b_ok = y * publics.g1 == b + c * publics.h1;
+    let a_ok = y * publics.g1 == a + c * publics.h1;
+    let b_ok = y * publics.g2 == b + c * publics.h2;
     if a_ok & b_ok {
         Ok(Transcript {
             a: a1,

@@ -101,10 +101,10 @@ async fn prove_ownership<T: LocalTransport>(
     dlog_eq::prove(
         transport,
         Publics {
-            g: RISTRETTO_BASEPOINT_POINT,
-            h: public,
             g1: RISTRETTO_BASEPOINT_POINT,
             h1: public,
+            g2: RISTRETTO_BASEPOINT_POINT,
+            h2: public,
         },
         Secrets { x: secret },
     )
@@ -116,10 +116,10 @@ async fn verify_ownership<T: LocalTransport>(transport: &mut T, public: Ristrett
     dlog_eq::verify(
         transport,
         Publics {
-            g: RISTRETTO_BASEPOINT_POINT,
-            h: public,
             g1: RISTRETTO_BASEPOINT_POINT,
             h1: public,
+            g2: RISTRETTO_BASEPOINT_POINT,
+            h2: public,
         },
     )
     .await
