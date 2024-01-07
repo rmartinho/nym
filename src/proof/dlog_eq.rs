@@ -2,12 +2,12 @@
 
 use crate::{
     error::{Error, Result},
-    hash::{TranscriptDigest as _, TranscriptProtocol as _},
+    hash::TranscriptProtocol as _,
     transport::LocalTransport,
 };
 use curve25519_dalek::{RistrettoPoint, Scalar};
 use rand::thread_rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Public parameters
 #[derive(Copy, Clone)]
@@ -91,12 +91,14 @@ pub fn non_interactive_challenge_for(
     a: RistrettoPoint,
     b: RistrettoPoint,
 ) -> Scalar {
-    let mut h = merlin::Transcript::new(b"dlog-eq-proof/non-interactive-challenge");
+    let mut h = merlin::Transcript::new(b"nym/0.1/dlog-eq-proof/non-interactive-challenge");
     h.append_value(b"g", &publics.g);
     h.append_value(b"h", &publics.h);
     h.append_value(b"g~", &publics.g1);
     h.append_value(b"h~", &publics.h1);
     h.append_value(b"a", &a);
     h.append_value(b"b", &b);
-    Scalar::from_hash(h.into_digest())
+    let mut bytes = [0; 32];
+    h.challenge_bytes(b"c", &mut bytes);
+    Scalar::from_bytes_mod_order(bytes)
 }

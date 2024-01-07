@@ -80,10 +80,9 @@ pub trait Transcribe {
 
 impl<T: Transcribe> Transcribe for [T] {
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]) {
-        b"$vec".append_to(t, label);
-        self.len().append_to(t, b"$len");
+        self.len().append_to(t, label);
         for e in self.iter() {
-            e.append_to(t, b"$element");
+            e.append_to(t, b"$");
         }
     }
 }
@@ -131,14 +130,12 @@ impl Transcribe for String {
 
 impl Transcribe for Scalar {
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]) {
-        b"$scalar".append_to(t, label);
-        self.as_bytes().append_to(t, b"$bytes");
+        self.as_bytes().append_to(t, label);
     }
 }
 
 impl Transcribe for RistrettoPoint {
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]) {
-        b"$point".append_to(t, label);
-        self.compress().as_bytes().append_to(t, b"$bytes");
+        self.compress().as_bytes().append_to(t, label);
     }
 }
