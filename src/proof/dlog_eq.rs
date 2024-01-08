@@ -11,29 +11,29 @@ use serde::{Deserialize, Serialize};
 
 /// Public parameters
 #[derive(Copy, Clone)]
-pub struct Publics {
+pub struct Publics<'a> {
     /// First point's base
-    pub g1: RistrettoPoint,
+    pub g1: &'a RistrettoPoint,
     /// First point
-    pub h1: RistrettoPoint,
+    pub h1: &'a RistrettoPoint,
     /// Second point's base
-    pub g2: RistrettoPoint,
+    pub g2: &'a RistrettoPoint,
     /// Second point
-    pub h2: RistrettoPoint,
+    pub h2: &'a RistrettoPoint,
 }
 
 /// Secret parameters
 #[derive(Copy, Clone)]
-pub struct Secrets {
+pub struct Secrets<'a> {
     /// Discrete logarithm
-    pub x: Scalar,
+    pub x: &'a Scalar,
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the prover
 pub async fn prove<T: LocalTransport>(
     t: &mut T,
-    publics: Publics,
-    secrets: Secrets,
+    publics: Publics<'_>,
+    secrets: Secrets<'_>,
 ) -> Result<(), Error> {
     let r = Scalar::random(&mut thread_rng());
     let a = r * publics.g1;
@@ -47,7 +47,7 @@ pub async fn prove<T: LocalTransport>(
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the verifier
-pub async fn verify<T: LocalTransport>(t: &mut T, publics: Publics) -> Result<(), Error> {
+pub async fn verify<T: LocalTransport>(t: &mut T, publics: Publics<'_>) -> Result<(), Error> {
     let a: RistrettoPoint = t.receive(b"a").await?;
     let b: RistrettoPoint = t.receive(b"b").await?;
     let c = Scalar::random(&mut thread_rng());
@@ -92,13 +92,11 @@ pub fn non_interactive_challenge_for(
     b: RistrettoPoint,
 ) -> Scalar {
     let mut h = merlin::Transcript::new(b"nym/0.1/dlog-eq-proof/non-interactive-challenge");
-    h.append_value(b"g1", &publics.g1);
-    h.append_value(b"h1", &publics.h1);
-    h.append_value(b"g2", &publics.g2);
-    h.append_value(b"h2", &publics.h2);
-    h.append_value(b"a", &a);
-    h.append_value(b"b", &b);
-    let mut bytes = [0; 32];
-    h.challenge_bytes(b"c", &mut bytes);
-    Scalar::from_bytes_mod_order(bytes)
+    h.commit(b"g1", &publics.g1);
+    h.commit(b"h1", &publics.h1);
+    h.commit(b"g2", &publics.g2);
+    h.commit(b"h2", &publics.h2);
+    h.commit(b"a", &a);
+    h.commit(b"b", &b);
+    h.challenge(b"c")
 }

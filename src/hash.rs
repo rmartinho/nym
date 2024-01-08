@@ -10,13 +10,20 @@ use merlin::Transcript;
 
 /// A transcript-based protocol interface
 pub trait TranscriptProtocol {
-    /// Appends a value, with a given label for framing
-    fn append_value<M: Transcribe + ?Sized>(&mut self, label: &'static [u8], m: &M);
+    /// Commits a value, with a given label for framing
+    fn commit<M: Transcribe + ?Sized>(&mut self, label: &'static [u8], m: &M);
+
+    /// Retrieves a challenge, with a given label for framing
+    fn challenge<M: Challenge>(&mut self, label: &'static [u8]) -> M;
 }
 
 impl TranscriptProtocol for Transcript {
-    fn append_value<M: Transcribe + ?Sized>(&mut self, label: &'static [u8], m: &M) {
+    fn commit<M: Transcribe + ?Sized>(&mut self, label: &'static [u8], m: &M) {
         m.append_to(self, label)
+    }
+
+    fn challenge<C: Challenge>(&mut self, label: &'static [u8]) -> C {
+        C::challenge_from(self, label)
     }
 }
 
@@ -72,10 +79,16 @@ impl XofReader for TranscriptXofReaderImpl {
     }
 }
 
-/// A type that can be hashed using a STROBE
+/// A type that can be appended to a transcript
 pub trait Transcribe {
     /// Appends this object to a transcript, with a given label for framing
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]);
+}
+
+/// A type that can be read from a transcript
+pub trait Challenge {
+    /// Obtains a challenge of this type from a transcript, with a given label for framing
+    fn challenge_from(t: &mut Transcript, label: &'static [u8]) -> Self;
 }
 
 impl<T: Transcribe> Transcribe for [T] {
@@ -131,6 +144,14 @@ impl Transcribe for String {
 impl Transcribe for Scalar {
     fn append_to(&self, t: &mut Transcript, label: &'static [u8]) {
         self.as_bytes().append_to(t, label);
+    }
+}
+
+impl Challenge for Scalar {
+    fn challenge_from(t: &mut Transcript, label: &'static [u8]) -> Self {
+        let mut buf = [0; 64];
+        t.challenge_bytes(label, &mut buf);
+        Self::from_bytes_mod_order_wide(&buf)
     }
 }
 

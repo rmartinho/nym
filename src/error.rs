@@ -8,6 +8,9 @@ pub enum Error {
     /// Verification of a proof failed
     #[error("proof verification failed")]
     BadProof,
+    /// Verification of a signature failed
+    #[error("signature verification failed")]
+    BadSignature,
     /// A transport error occurred
     #[error(transparent)]
     Transport(#[from] io::Error),

@@ -10,23 +10,23 @@ use rand::thread_rng;
 use super::dlog_eq::{self, Transcript};
 
 /// Public parameters
-pub type Publics = dlog_eq::Publics;
+pub type Publics<'a> = dlog_eq::Publics<'a>;
 
 /// Secret parameters for the prover
-pub type ProverSecrets = dlog_eq::Secrets;
+pub type ProverSecrets<'a> = dlog_eq::Secrets<'a>;
 
 /// Secret parameters for the verifier
 #[derive(Copy, Clone)]
-pub struct VerifierSecrets {
+pub struct VerifierSecrets<'a> {
     /// Blinding factor
-    pub γ: Scalar,
+    pub γ: &'a Scalar,
 }
 
 /// Performs the protocol for proving equality of discrete logarithms as the prover
 pub async fn prove<T: LocalTransport>(
     t: &mut T,
-    publics: Publics,
-    secrets: ProverSecrets,
+    publics: Publics<'_>,
+    secrets: ProverSecrets<'_>,
 ) -> Result<(), Error> {
     let r = Scalar::random(&mut thread_rng());
     let a = r * publics.g1;
@@ -42,8 +42,8 @@ pub async fn prove<T: LocalTransport>(
 /// Performs the protocol for proving equality of discrete logarithms as the verifier
 pub async fn verify<T: LocalTransport>(
     t: &mut T,
-    publics: Publics,
-    secrets: VerifierSecrets,
+    publics: Publics<'_>,
+    secrets: VerifierSecrets<'_>,
 ) -> Result<Transcript, Error> {
     let a: RistrettoPoint = t.receive(b"a").await?;
     let b: RistrettoPoint = t.receive(b"b").await?;
@@ -54,8 +54,8 @@ pub async fn verify<T: LocalTransport>(
     let b1 = secrets.γ * (b + α * publics.g2 + β * publics.h2); // g*γr + g*γα * g*γxβ = g*γ*(r + α * xβ)
     let c_minus_β = dlog_eq::non_interactive_challenge_for(
         Publics {
-            g2: secrets.γ * publics.g2,
-            h2: secrets.γ * publics.h2,
+            g2: &(secrets.γ * publics.g2),
+            h2: &(secrets.γ * publics.h2),
             ..publics
         },
         a1,

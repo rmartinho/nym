@@ -9,6 +9,7 @@ digest = "0.10"
 futures = { version = "0.3", features = ["executor"] }
 merlin = "3"
 rand = "0.8"
+schnorrkel = { git = "https://github.com/rmartinho/schnorrkel-rmf.git", tag = "v0.11.401", version = "0.11.4" }
 serde = "1"
 thiserror = "1"
 trait-variant = "0.1"
