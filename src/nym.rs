@@ -72,7 +72,7 @@ impl Org {
     /// Initializes a new organization with the given secret key
     pub fn new(sk: OrgSecretKey) -> Self {
         Self {
-            pk: sk.public(),
+            pk: sk.to_public(),
             sk,
         }
     }
@@ -87,7 +87,7 @@ impl User {
     /// Initializes a new user with the given secret key
     pub fn new(sk: UserSecretKey) -> Self {
         Self {
-            pk: sk.public(),
+            pk: sk.to_public(),
             sk,
         }
     }

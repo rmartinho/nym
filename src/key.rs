@@ -44,7 +44,7 @@ impl UserSecretKey {
     }
 
     /// Gets the public part of this key.
-    pub fn public(&self) -> UserPublicKey {
+    pub fn to_public(&self) -> UserPublicKey {
         UserPublicKey {
             key: self.key.to_public()
         }
@@ -70,7 +70,7 @@ impl OrgSecretKey {
     }
 
     /// Gets the public part of this key.
-    pub fn public(&self) -> OrgPublicKey {
+    pub fn to_public(&self) -> OrgPublicKey {
         OrgPublicKey {
             key1: self.key1.to_public(),
             key2: self.key2.to_public(),
@@ -79,8 +79,8 @@ impl OrgSecretKey {
 
     /// Proves ownership of this key to a user
     pub async fn prove_ownership<T: LocalTransport>(&self, user: &mut T) -> Result {
-        prove_ownership(user, self.public().key1.as_point(), self.key1.exponent()).await?;
-        prove_ownership(user, self.public().key2.as_point(), self.key2.exponent()).await
+        prove_ownership(user, self.to_public().key1.as_point(), self.key1.exponent()).await?;
+        prove_ownership(user, self.to_public().key2.as_point(), self.key2.exponent()).await
     }
 }
 
